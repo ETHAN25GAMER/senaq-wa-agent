@@ -1,8 +1,5 @@
-import type { Language } from "./i18n/strings.js";
-
 export type WaStage =
   | "idle"
-  | "choose_language"
   | "menu"
   | "choose_service"
   | "choose_date"
@@ -27,16 +24,13 @@ export interface WaContext {
   slot_iso?: string; // full ISO datetime of the chosen slot
   job_id?: string;
   invoice_id?: string;
-  invoice_amount_aed?: number;
+  invoice_amount?: number;
 
   // follow-up-nudge skill state
   prev_stage?: WaStage;
   last_prompt?: { body: string; buttons: OutboundButton[] };
   followup1_sent_at?: string; // ISO timestamp
   followup2_sent_at?: string; // ISO timestamp
-
-  // selected interaction language (set by the language-picker first turn)
-  language?: Language;
 }
 
 export interface Customer {

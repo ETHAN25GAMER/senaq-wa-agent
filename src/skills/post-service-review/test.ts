@@ -31,9 +31,9 @@ function check(name: string, cond: boolean, detail?: string): void {
 
 const customer: Customer = {
   id: "cust_test_rev_001",
-  phone: "+971500000002",
+  phone: "+15555550102",
   name: "Test Review Customer",
-  address: "Test Villa, Dubai",
+  address: "123 Test Street",
   amc_tier: "none",
   wa_stage: "review_pending",
   wa_context: {},

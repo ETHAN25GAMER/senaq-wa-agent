@@ -30,9 +30,9 @@ function check(name: string, cond: boolean, detail?: string): void {
 
 const customer: Customer = {
   id: "cust_test_inv_001",
-  phone: "+971500000001",
+  phone: "+15555550101",
   name: "Test Invoice Customer",
-  address: "Test Villa, Dubai",
+  address: "123 Test Street",
   amc_tier: "none",
   wa_stage: "awaiting_payment",
   wa_context: {},
@@ -42,7 +42,7 @@ const customer: Customer = {
 
 const ctx: WaContext = {
   invoice_id: "inv_test_001",
-  invoice_amount_aed: 350,
+  invoice_amount: 350,
 };
 
 // --- Tests ----------------------------------------------------------------
@@ -71,7 +71,7 @@ async function testPayNow() {
   check("button count 1–3", r.buttons.length >= 1 && r.buttons.length <= 3);
   check(
     "body does NOT pre-embed amount (skill rule)",
-    !/\b350\b/.test(r.body) && !/AED/i.test(r.body),
+    !/\b350\b/.test(r.body) && !/\$/.test(r.body),
     r.body,
   );
 }
@@ -212,7 +212,7 @@ async function testToolsWired() {
   console.log("\n[case] tools the skill calls are wired in dispatch");
   const payRes = await dispatch("generate-payment-link", {
     invoice_id: ctx.invoice_id!,
-    amount_aed: ctx.invoice_amount_aed!,
+    amount: ctx.invoice_amount!,
   });
   check("generate-payment-link dispatches ok", payRes.ok === true);
   check(

@@ -8,11 +8,11 @@
 // Usage:
 //   npx tsx --env-file=.env scripts/simulate-inbound.ts <target-url> <phone> [buttonId]
 //
-//   # free-text first contact → expect the language picker
+//   # free-text first contact → expect the main menu
 //   npx tsx --env-file=.env scripts/simulate-inbound.ts http://localhost:3000 919653411753
 //
 //   # button tap → expect the next screen
-//   npx tsx --env-file=.env scripts/simulate-inbound.ts http://localhost:3000 919653411753 lang_en
+//   npx tsx --env-file=.env scripts/simulate-inbound.ts http://localhost:3000 919653411753 book_service
 
 import crypto from "node:crypto";
 
@@ -78,7 +78,7 @@ async function main(): Promise<void> {
       "Usage: tsx scripts/simulate-inbound.ts <target-url> <phone> [buttonId]",
     );
     console.error(
-      "Example: tsx scripts/simulate-inbound.ts http://localhost:3000 919653411753 lang_en",
+      "Example: tsx scripts/simulate-inbound.ts http://localhost:3000 919653411753 book_service",
     );
     process.exit(2);
   }

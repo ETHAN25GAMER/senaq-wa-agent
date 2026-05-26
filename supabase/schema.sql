@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id  UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
   job_id       UUID REFERENCES jobs(id) ON DELETE SET NULL,
-  amount_aed   NUMERIC(10,2) NOT NULL,
+  amount       NUMERIC(10,2) NOT NULL,
   status       TEXT NOT NULL DEFAULT 'pending'
                   CHECK (status IN ('pending','paid','disputed','cancelled')),
   due_date     DATE NOT NULL,

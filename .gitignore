@@ -6,3 +6,6 @@ dist/
 .claude/
 *.log
 .DS_Store
+
+# dashboard local config (Supabase URL + anon key)
+dashboard/config.js

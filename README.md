@@ -1,6 +1,6 @@
 # SENAQ Pest Control — WhatsApp MCQ Agent
 
-WhatsApp Business agent for SENAQ Pest Control (Dubai). Customer interactions
+WhatsApp Business agent for SENAQ Pest Control. Customer interactions
 are strictly button-based MCQ — never free text.
 
 ## Skills

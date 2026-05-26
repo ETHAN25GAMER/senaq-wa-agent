@@ -11,6 +11,12 @@ const EnvSchema = z.object({
 
   CRON_SECRET: z.string().min(16),
 
+  // Optional — used by generate-payment-link / send-review-link tools.
+  // Until a real payment provider is wired up, PAYMENT_LINK_BASE just
+  // points at a placeholder page that explains the link.
+  PAYMENT_LINK_BASE: z.string().url().optional(),
+  GOOGLE_REVIEW_URL: z.string().url().optional(),
+
   PORT: z.coerce.number().int().positive().default(3000),
 });
 

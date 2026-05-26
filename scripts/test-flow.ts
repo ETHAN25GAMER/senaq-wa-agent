@@ -26,13 +26,14 @@ interface Scenario {
   startStage: WaStage;
   startContext: WaContext;
   steps: Step[];
+  customerOverrides?: Partial<Customer>;
 }
 
 const FAKE_CUSTOMER: Customer = {
   id: "cust_test_001",
-  phone: "971500000000",
+  phone: "15555550100",
   name: "Test Customer",
-  address: "Test Address, Dubai",
+  address: "123 Test Street",
   amc_tier: "none",
   wa_stage: "idle",
   wa_context: {},
@@ -71,6 +72,21 @@ const SCENARIOS: Scenario[] = [
       { buttonId: "date_day_after" },
       { buttonId: "slot_evening" },
       { buttonId: "confirm_yes" },
+    ],
+  },
+  {
+    name: "Booking — confirm without address escalates",
+    skill: "booking",
+    startStage: "idle",
+    startContext: {},
+    customerOverrides: { address: null },
+    steps: [
+      { buttonId: null },
+      { buttonId: "book_service" },
+      { buttonId: "svc_general" },
+      { buttonId: "date_tomorrow" },
+      { buttonId: "slot_morning" },
+      { buttonId: "confirm_yes", note: "no address on file → escalated, not booked" },
     ],
   },
   {
@@ -187,28 +203,28 @@ const SCENARIOS: Scenario[] = [
     name: "Invoice — pay now",
     skill: "invoice",
     startStage: "awaiting_payment",
-    startContext: { invoice_id: "inv_demo_77", invoice_amount_aed: 450 },
+    startContext: { invoice_id: "inv_demo_77", invoice_amount: 450 },
     steps: [{ buttonId: "pay_now" }],
   },
   {
     name: "Invoice — pay later → tomorrow",
     skill: "invoice",
     startStage: "awaiting_payment",
-    startContext: { invoice_id: "inv_demo_77", invoice_amount_aed: 450 },
+    startContext: { invoice_id: "inv_demo_77", invoice_amount: 450 },
     steps: [{ buttonId: "pay_later" }, { buttonId: "defer_tomorrow" }],
   },
   {
     name: "Invoice — pay later → next week",
     skill: "invoice",
     startStage: "awaiting_payment",
-    startContext: { invoice_id: "inv_demo_77", invoice_amount_aed: 450 },
+    startContext: { invoice_id: "inv_demo_77", invoice_amount: 450 },
     steps: [{ buttonId: "pay_later" }, { buttonId: "defer_next_week" }],
   },
   {
     name: "Invoice — dispute",
     skill: "invoice",
     startStage: "awaiting_payment",
-    startContext: { invoice_id: "inv_demo_77", invoice_amount_aed: 450 },
+    startContext: { invoice_id: "inv_demo_77", invoice_amount: 450 },
     steps: [{ buttonId: "pay_dispute" }],
   },
 
@@ -273,65 +289,6 @@ const SCENARIOS: Scenario[] = [
     },
     steps: [{ buttonId: "fup_continue" }],
   },
-
-  // ----- language picker (i18n) -----
-  // Override the runScenario default by explicitly omitting `language` so the
-  // router shows the bilingual picker.
-  {
-    name: "Language — first turn shows picker",
-    skill: "language",
-    startStage: "idle",
-    startContext: { language: undefined }, // unset so picker triggers
-    steps: [{ buttonId: null, note: "fresh customer" }],
-  },
-  {
-    name: "Language — pick English",
-    skill: "language",
-    startStage: "choose_language",
-    startContext: { language: undefined },
-    steps: [{ buttonId: "lang_en" }],
-  },
-  {
-    name: "Language — pick Arabic",
-    skill: "language",
-    startStage: "choose_language",
-    startContext: { language: undefined },
-    steps: [{ buttonId: "lang_ar" }],
-  },
-  {
-    name: "Language — Arabic booking happy path",
-    skill: "language",
-    startStage: "menu",
-    startContext: { language: "ar" },
-    steps: [
-      { buttonId: "book_service" },
-      { buttonId: "svc_cockroach" },
-      { buttonId: "date_tomorrow" },
-      { buttonId: "slot_morning" },
-      { buttonId: "confirm_yes" },
-    ],
-  },
-  {
-    name: "Language — follow-up resume preserves Arabic prompt",
-    skill: "language",
-    startStage: "followup_pending",
-    startContext: {
-      language: "ar",
-      prev_stage: "choose_slot",
-      service_type: "cockroach",
-      date_iso: "2026-05-20",
-      last_prompt: {
-        body: "اختر الوقت المناسب:",
-        buttons: [
-          { id: "slot_morning", title: "صباحاً" },
-          { id: "slot_afternoon", title: "ظهراً" },
-          { id: "slot_evening", title: "مساءً" },
-        ],
-      },
-      followup1_sent_at: "2026-05-19T10:00:00.000Z",
-    },
-    steps: [{ buttonId: "fup_continue" }],
-  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -356,9 +313,7 @@ async function runScenario(s: Scenario): Promise<{ passed: boolean; reason?: str
   );
 
   let stage: WaStage = s.startStage;
-  // Default language to English unless the scenario sets one — keeps the
-  // 20 pre-i18n scenarios working without explicit `language: "en"` on each.
-  let context: WaContext = { language: "en", ...s.startContext };
+  let context: WaContext = { ...s.startContext };
 
   for (let i = 0; i < s.steps.length; i++) {
     const step = s.steps[i]!;
@@ -375,7 +330,12 @@ async function runScenario(s: Scenario): Promise<{ passed: boolean; reason?: str
     let result;
     try {
       result = await handleTurn({
-        customer: { ...FAKE_CUSTOMER, wa_stage: stage, wa_context: context },
+        customer: {
+          ...FAKE_CUSTOMER,
+          ...(s.customerOverrides ?? {}),
+          wa_stage: stage,
+          wa_context: context,
+        },
         waStage: stage,
         waContext: context,
         buttonReply,

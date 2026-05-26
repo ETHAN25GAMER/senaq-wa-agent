@@ -1,7 +1,7 @@
 # SENAQ WhatsApp Agent — Project Guide
 
-WhatsApp Business agent for **SENAQ Pest Control (Dubai)**. Customer interactions
-are **strictly button-based MCQ** — never free text. Bilingual: English + Arabic.
+WhatsApp Business agent for **SENAQ Pest Control**. Customer interactions
+are **strictly button-based MCQ** — never free text. English-only.
 
 ## What this is (and isn't)
 
@@ -32,7 +32,7 @@ src/
   config.ts              zod-validated env loader (reads process.env)
   types.ts               WaStage, WaContext, Customer, AgentTurnResult
   i18n/
-    strings.ts           en/ar translation table + t(lang, key, params?)
+    strings.ts           English string table + t(key, params?) helper
   skills/                ONE folder per skill, each with a SKILL.md (docs only)
     appointment-chatbot/
     post-service-review/
@@ -79,29 +79,27 @@ vercel.json              Rewrites all routes through api/, schedules /cron/follo
 ```powershell
 npm run dev           # local Hono server on :3000 (tsx watch + --env-file=.env)
 npm run typecheck     # strict tsc, must always pass
-npm run test:flow     # run all 25 router scenarios in terminal (zero deps)
+npm run test:flow     # run all router scenarios in terminal (zero deps)
 npm run test:flow booking      # filter by skill or scenario name
 
-# Send a real 21-message demo to a WhatsApp number:
-npx tsx --env-file=.env scripts/preview-on-whatsapp.ts +919653411753
+# Send a real walkthrough demo to a WhatsApp number:
+npx tsx --env-file=.env scripts/preview-on-whatsapp.ts +15555550100
 
 # One-shot Meta API diagnostic:
-npx tsx --env-file=.env scripts/diagnose-whatsapp.ts +919653411753
+npx tsx --env-file=.env scripts/diagnose-whatsapp.ts +15555550100
 ```
 
 ## Hard rules (do not break)
 
 1. **Buttons only.** Every customer-facing message has 1–3 buttons.
    `sendButtons()` enforces 1–3; Meta also caps button **titles at 20 chars**.
-2. **Always localize.** Never hardcode a customer-facing string in `agent.ts`
-   or `app.ts`. Use `t(lang, "key", { params? })` from `src/i18n/strings.ts`.
-   `Record<Language, Record<StringKey, string>>` makes TypeScript fail loudly
-   if any key is missing in either language.
+2. **Customer-facing strings live in the table.** Never hardcode a customer-facing
+   string in `agent.ts` or `app.ts`. Use `t("key", { params? })` from
+   `src/i18n/strings.ts`. TypeScript's `StringKey` union enforces that the key exists.
 3. **Always set `nextContext`.** Every `Transition` returned from `agent.ts`
-   must include `nextContext` (it gets persisted via `setWaState`). When you
-   want to clear context, pass `{ language: lang }` to preserve the language.
-4. **`stripFollowupFields()` must preserve `language`.** Don't pull it out.
-5. **Verify signature against the RAW body.** In `app.ts`, signature check
+   must include `nextContext` (it gets persisted via `setWaState`). Pass `{}` to
+   clear it; otherwise spread `ctx` and overwrite the fields you care about.
+4. **Verify signature against the RAW body.** In `app.ts`, signature check
    happens BEFORE `JSON.parse`. Don't rearrange.
 
 ## How state works (read this once)
@@ -121,10 +119,10 @@ npx tsx --env-file=.env scripts/diagnose-whatsapp.ts +919653411753
    (cron / outbound).
 2. Add any new stages to `WaStage` in `src/types.ts`.
 3. Add any new context fields to `WaContext` in `src/types.ts`.
-4. Add new string keys to `StringKey` in `src/i18n/strings.ts`, then add
-   translations in BOTH `en` and `ar` blocks (TypeScript will scream until both).
+4. Add new string keys to `StringKey` in `src/i18n/strings.ts` and the matching
+   text in the `STRINGS` object (TypeScript fails if either is missing).
 5. Add a `from<NewStage>` handler in `src/agent.ts` and wire it into the
-   `route()` switch. Use `t(lang, ...)` for every string.
+   `route()` switch. Use `t(...)` for every string.
 6. Add scenarios to `scripts/test-flow.ts` — both happy path and edge cases.
 7. `npm run typecheck && npm run test:flow` — both must pass.
 8. (Optional) Create `src/skills/<name>/SKILL.md` documenting the stage map.

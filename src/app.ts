@@ -4,6 +4,7 @@
 //   - src/index.ts        (local dev: wraps this with @hono/node-server)
 //   - api/[[...path]].ts  (Vercel: exports this as a serverless function)
 
+import crypto from "node:crypto";
 import { Hono } from "hono";
 
 import { config } from "./config.js";
@@ -26,8 +27,16 @@ import {
   withErrorHandling,
 } from "./utils/error-handler.js";
 import { log } from "./utils/logger.js";
-import { t, type Language } from "./i18n/strings.js";
+import { t } from "./i18n/strings.js";
 import type { OutboundButton, WaContext } from "./types.js";
+
+function authMatches(headerValue: string | undefined, expected: string): boolean {
+  if (!headerValue) return false;
+  const a = Buffer.from(headerValue);
+  const b = Buffer.from(`Bearer ${expected}`);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
 
 export const app = new Hono();
 
@@ -75,15 +84,21 @@ app.post(
       throw new RateLimitError("too many messages", limit.retryAfterMs);
     }
 
-    const customer =
+    let customer =
       (await getCustomer(from)) ??
       (await upsertCustomer({ phone: from, wa_stage: "idle", wa_context: {} }));
 
+    // Capture the WhatsApp display name on first contact so we have something
+    // human-readable in the dashboard and outbound messages.
+    if (!customer.name && parsed.profileName) {
+      customer = await upsertCustomer({ phone: from, name: parsed.profileName });
+    }
+
     if (parsed.kind === "non_button") {
-      // A brand-new customer's first message is always free text — they have
-      // nothing to tap yet. Route them through the router from `idle` so they
-      // get the language picker instead of the generic fallback menu.
-      if (!customer.wa_context?.language) {
+      // Free-text inbound — never parse the text. Either re-prompt the
+      // existing customer with the fallback menu, or (first-ever message)
+      // route through `idle` so they land on the main menu.
+      if (customer.wa_stage === "idle" && !customer.wa_context?.last_prompt) {
         const result = await handleTurn({
           customer,
           waStage: "idle",
@@ -102,17 +117,13 @@ app.post(
         return c.json({ ok: true });
       }
 
-      // Existing customer typed free text mid-flow: re-prompt with the
-      // fallback button menu in their language. Never parse the text.
-      const lang: Language = customer.wa_context.language;
-      const body = t(lang, "fallback_prompt");
+      const body = t("fallback_prompt");
       const buttons: OutboundButton[] = [
-        { id: "menu", title: t(lang, "btn_main_menu") },
-        { id: "talk_human", title: t(lang, "btn_talk_human") },
+        { id: "menu", title: t("btn_main_menu") },
+        { id: "talk_human", title: t("btn_talk_human") },
       ];
       await sendButtons({ to: from, body, buttons });
       await setWaState(from, "menu", {
-        language: lang,
         last_prompt: { body, buttons },
       });
       return c.json({ ok: true });
@@ -153,11 +164,11 @@ app.post(
 // automatically when CRON_SECRET is set on the project.
 // ---------------------------------------------------------------------------
 
-function fupButtons(lang: Language): OutboundButton[] {
+function fupButtons(): OutboundButton[] {
   return [
-    { id: "fup_continue", title: t(lang, "btn_fup_continue") },
-    { id: "fup_restart", title: t(lang, "btn_fup_restart") },
-    { id: "fup_no", title: t(lang, "btn_fup_no") },
+    { id: "fup_continue", title: t("btn_fup_continue") },
+    { id: "fup_restart", title: t("btn_fup_restart") },
+    { id: "fup_no", title: t("btn_fup_no") },
   ];
 }
 
@@ -165,7 +176,7 @@ app.post(
   "/cron/followup",
   withErrorHandling(async (c) => {
     const auth = c.req.header("authorization");
-    if (auth !== `Bearer ${config.CRON_SECRET}`) {
+    if (!authMatches(auth, config.CRON_SECRET)) {
       return c.text("forbidden", 403);
     }
 
@@ -184,11 +195,10 @@ app.post(
 
     for (const customer of buckets.firstNudge) {
       try {
-        const lang: Language = customer.wa_context?.language ?? "en";
         await sendButtons({
           to: customer.phone,
-          body: t(lang, "fup_first_body"),
-          buttons: fupButtons(lang),
+          body: t("fup_first_body"),
+          buttons: fupButtons(),
         });
         const nextCtx: WaContext = {
           ...(customer.wa_context ?? {}),
@@ -207,11 +217,10 @@ app.post(
 
     for (const customer of buckets.secondNudge) {
       try {
-        const lang: Language = customer.wa_context?.language ?? "en";
         await sendButtons({
           to: customer.phone,
-          body: t(lang, "fup_second_body"),
-          buttons: fupButtons(lang),
+          body: t("fup_second_body"),
+          buttons: fupButtons(),
         });
         const nextCtx: WaContext = {
           ...(customer.wa_context ?? {}),
@@ -234,9 +243,7 @@ app.post(
           reason: "Customer abandoned conversation (no reply after 2 follow-ups)",
           severity: "low",
         });
-        await setWaState(customer.phone, "escalated", {
-          language: customer.wa_context?.language ?? "en",
-        });
+        await setWaState(customer.phone, "escalated", {});
         processedEscalate++;
       } catch (err) {
         log.error("cron_followup_escalate_failed", {
@@ -260,11 +267,11 @@ app.post(
 // Vercel Cron uses GET by default; mirror POST handler so it works for both.
 app.get("/cron/followup", (c) => {
   const auth = c.req.header("authorization");
-  if (auth !== `Bearer ${config.CRON_SECRET}`) return c.text("forbidden", 403);
+  if (!authMatches(auth, config.CRON_SECRET)) return c.text("forbidden", 403);
   return app.fetch(
     new Request(new URL("/cron/followup", "http://internal").toString(), {
       method: "POST",
-      headers: { authorization: auth },
+      headers: { authorization: auth! },
     }),
   );
 });

@@ -1,14 +1,14 @@
 // Send a curated walkthrough of all 5 skills to a real WhatsApp number so you
 // can see how each prompt + button set looks in the app.
 //
-// Run:   npx tsx --env-file=.env scripts/preview-on-whatsapp.ts +919653411753
+// Run:   npx tsx --env-file=.env scripts/preview-on-whatsapp.ts +15555550100
 //
 // Constraint: WhatsApp Cloud API only allows free-form messages to numbers
 // that have messaged the business in the last 24h. Open WhatsApp on the
 // target number and send any message to the business number first.
 
 import { sendButtons } from "../src/whatsapp/client.js";
-import { t, type Language } from "../src/i18n/strings.js";
+import { t } from "../src/i18n/strings.js";
 import type { OutboundButton } from "../src/types.js";
 
 interface Preview {
@@ -17,150 +17,121 @@ interface Preview {
   buttons: OutboundButton[];
 }
 
-function bookingFlow(lang: Language): Preview[] {
+function bookingFlow(): Preview[] {
   return [
     {
       skill: "booking",
-      body: t(lang, "menu_welcome"),
+      body: t("menu_welcome"),
       buttons: [
-        { id: "book_service", title: t(lang, "btn_book_service") },
-        { id: "amc_renewal", title: t(lang, "btn_amc_renewal") },
-        { id: "other", title: t(lang, "btn_other") },
+        { id: "book_service", title: t("btn_book_service") },
+        { id: "amc_renewal", title: t("btn_amc_renewal") },
+        { id: "other", title: t("btn_other") },
       ],
     },
     {
       skill: "booking",
-      body: t(lang, "choose_service_prompt"),
+      body: t("choose_service_prompt"),
       buttons: [
-        { id: "svc_cockroach", title: t(lang, "btn_svc_cockroach") },
-        { id: "svc_bed_bugs", title: t(lang, "btn_svc_bed_bugs") },
-        { id: "svc_general", title: t(lang, "btn_svc_general") },
+        { id: "svc_cockroach", title: t("btn_svc_cockroach") },
+        { id: "svc_bed_bugs", title: t("btn_svc_bed_bugs") },
+        { id: "svc_general", title: t("btn_svc_general") },
       ],
     },
     {
       skill: "booking",
-      body: t(lang, "choose_date_prompt"),
+      body: t("choose_date_prompt"),
       buttons: [
-        { id: "date_today", title: t(lang, "btn_date_today") },
-        { id: "date_tomorrow", title: t(lang, "btn_date_tomorrow") },
-        { id: "date_day_after", title: t(lang, "btn_date_day_after") },
+        { id: "date_today", title: t("btn_date_today") },
+        { id: "date_tomorrow", title: t("btn_date_tomorrow") },
+        { id: "date_day_after", title: t("btn_date_day_after") },
       ],
     },
     {
       skill: "booking",
-      body: t(lang, "choose_slot_prompt"),
+      body: t("choose_slot_prompt"),
       buttons: [
-        { id: "slot_morning", title: t(lang, "btn_slot_morning") },
-        { id: "slot_afternoon", title: t(lang, "btn_slot_afternoon") },
-        { id: "slot_evening", title: t(lang, "btn_slot_evening") },
+        { id: "slot_morning", title: t("btn_slot_morning") },
+        { id: "slot_afternoon", title: t("btn_slot_afternoon") },
+        { id: "slot_evening", title: t("btn_slot_evening") },
       ],
     },
     {
       skill: "booking",
-      body: t(lang, "confirm_slot_prompt", {
-        slot: t(lang, "confirm_slot_template", {
+      body: t("confirm_slot_prompt", {
+        slot: t("confirm_slot_template", {
           date: "2026-05-20",
-          label: t(lang, "slot_label_morning"),
+          label: t("slot_label_morning"),
           hour: "09",
         }),
       }),
       buttons: [
-        { id: "confirm_yes", title: t(lang, "btn_confirm_yes") },
-        { id: "confirm_change", title: t(lang, "btn_confirm_change") },
-        { id: "confirm_cancel", title: t(lang, "btn_confirm_cancel") },
+        { id: "confirm_yes", title: t("btn_confirm_yes") },
+        { id: "confirm_change", title: t("btn_confirm_change") },
+        { id: "confirm_cancel", title: t("btn_confirm_cancel") },
       ],
     },
     {
       skill: "booking",
-      body: t(lang, "booked_ack"),
-      buttons: [{ id: "menu", title: t(lang, "btn_main_menu") }],
+      body: t("booked_ack"),
+      buttons: [{ id: "menu", title: t("btn_main_menu") }],
     },
   ];
 }
 
-function reviewPrompt(lang: Language): Preview {
-  // Open-ended rating prompt — uses the same buttons the actual flow does.
+function reviewPrompt(): Preview {
   return {
     skill: "review",
-    body: lang === "ar"
-      ? "كيف كانت زيارتنا؟"
-      : "How was your visit?",
+    body: "How was your visit?",
     buttons: [
-      { id: "rate_great", title: lang === "ar" ? "ممتازة" : "Great" },
-      { id: "rate_okay", title: lang === "ar" ? "جيدة" : "Okay" },
-      { id: "rate_bad", title: lang === "ar" ? "سيئة" : "Bad" },
+      { id: "rate_great", title: "Great" },
+      { id: "rate_okay", title: "Okay" },
+      { id: "rate_bad", title: "Bad" },
     ],
   };
 }
 
-function reminderAck(lang: Language): Preview {
+function reminderAck(): Preview {
   return {
     skill: "reminders",
-    body: lang === "ar"
-      ? "تذكير: لديك زيارة غداً صباحاً. هل نتأكد من الموعد؟"
-      : "Reminder: your visit is tomorrow morning. Confirm?",
+    body: "Reminder: your visit is tomorrow morning. Confirm?",
     buttons: [
-      { id: "rem_confirm", title: lang === "ar" ? "تأكيد" : "Confirm" },
-      { id: "rem_reschedule", title: lang === "ar" ? "تغيير الموعد" : "Reschedule" },
-      { id: "rem_cancel", title: lang === "ar" ? "إلغاء" : "Cancel" },
+      { id: "rem_confirm", title: "Confirm" },
+      { id: "rem_reschedule", title: "Reschedule" },
+      { id: "rem_cancel", title: "Cancel" },
     ],
   };
 }
 
-function awaitingPayment(lang: Language): Preview {
+function awaitingPayment(): Preview {
   return {
     skill: "invoice",
-    body: lang === "ar"
-      ? "فاتورتك بقيمة 450 درهم مستحقة. كيف تود إتمام الدفع؟"
-      : "Your invoice of AED 450 is due. How would you like to proceed?",
+    body: "Your invoice of $450 is due. How would you like to proceed?",
     buttons: [
-      { id: "pay_now", title: lang === "ar" ? "الدفع الآن" : "Pay now" },
-      { id: "pay_later", title: lang === "ar" ? "الدفع لاحقاً" : "Pay later" },
-      { id: "pay_dispute", title: lang === "ar" ? "اعتراض" : "Dispute" },
+      { id: "pay_now", title: "Pay now" },
+      { id: "pay_later", title: "Pay later" },
+      { id: "pay_dispute", title: "Dispute" },
     ],
   };
 }
 
-function followupNudge(lang: Language): Preview {
+function followupNudge(): Preview {
   return {
     skill: "followup",
-    body: t(lang, "fup_first_body"),
+    body: t("fup_first_body"),
     buttons: [
-      { id: "fup_continue", title: t(lang, "btn_fup_continue") },
-      { id: "fup_restart", title: t(lang, "btn_fup_restart") },
-      { id: "fup_no", title: t(lang, "btn_fup_no") },
-    ],
-  };
-}
-
-function languagePicker(): Preview {
-  return {
-    skill: "language",
-    body: t("en", "lang_picker_prompt"),
-    buttons: [
-      { id: "lang_en", title: t("en", "btn_lang_en") },
-      { id: "lang_ar", title: t("en", "btn_lang_ar") },
+      { id: "fup_continue", title: t("btn_fup_continue") },
+      { id: "fup_restart", title: t("btn_fup_restart") },
+      { id: "fup_no", title: t("btn_fup_no") },
     ],
   };
 }
 
 const ALL_PREVIEWS: Preview[] = [
-  // First-ever turn
-  languagePicker(),
-
-  // English walkthrough
-  ...bookingFlow("en"),
-  reviewPrompt("en"),
-  reminderAck("en"),
-  awaitingPayment("en"),
-  followupNudge("en"),
-
-  // Arabic walkthrough
-  ...bookingFlow("ar"),
-  reviewPrompt("ar"),
-  reminderAck("ar"),
-  awaitingPayment("ar"),
-  followupNudge("ar"),
+  ...bookingFlow(),
+  reviewPrompt(),
+  reminderAck(),
+  awaitingPayment(),
+  followupNudge(),
 ];
 
 function sleep(ms: number): Promise<void> {
@@ -176,7 +147,7 @@ async function main(): Promise<void> {
   const rawPhone = process.argv[2];
   if (!rawPhone) {
     console.error("Usage: tsx scripts/preview-on-whatsapp.ts <phone-number>");
-    console.error("Example: tsx scripts/preview-on-whatsapp.ts +919653411753");
+    console.error("Example: tsx scripts/preview-on-whatsapp.ts +15555550100");
     process.exit(2);
   }
   const to = normalizePhone(rawPhone);

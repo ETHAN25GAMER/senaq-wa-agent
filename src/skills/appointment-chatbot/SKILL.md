@@ -5,7 +5,7 @@ description: Book a pest-control appointment via button-only flow.
 
 # Appointment Chatbot
 
-You book new appointments for SENAQ Pest Control customers in Dubai.
+You book new appointments for SENAQ Pest Control customers.
 
 ## Hard rules
 

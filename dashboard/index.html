@@ -1,0 +1,1259 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SENAQ — Operations Console</title>
+<style>
+  /* ─────────────────────────────────────────────────────────────
+     Tokens
+     ───────────────────────────────────────────────────────────── */
+  :root {
+    /* surfaces — pure black scale */
+    --bg-0:        #000000;
+    --bg-1:        #0A0A0A;
+    --bg-2:        #121212;
+    --bg-3:        #1A1A1A;
+
+    /* lines */
+    --line:        #1F1F1F;
+    --line-bright: #2E2E2E;
+
+    /* type */
+    --ink:         #FFFFFF;
+    --ink-dim:     #C8C8C8;
+    --muted:       #808080;
+    --faint:       #4D4D4D;
+
+    /* accents — monochrome */
+    --lime:        #FFFFFF;
+    --lime-soft:   #C8C8C8;
+    --moss:        #808080;
+    --amber:       #C8C8C8;
+    --crimson:     #FFFFFF;
+    --azure:       #B0B0B0;
+    --gold:        #B0B0B0;
+
+    /* radii / sizing */
+    --r-xs: 2px;
+    --r-sm: 4px;
+    --r-md: 8px;
+    --r-lg: 14px;
+
+    --shadow-1: 0 1px 0 rgba(255,255,255,0.025) inset, 0 24px 60px -30px rgba(0,0,0,0.6);
+
+    /* fonts — simple system sans throughout */
+    --ff-display: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --ff-sans:    system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --ff-mono:    system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     Base
+     ───────────────────────────────────────────────────────────── */
+  *,*::before,*::after { box-sizing: border-box; }
+  html,body { margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--ff-sans);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink);
+    background: var(--bg-0);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "ss02", "cv11";
+    overflow-x: hidden;
+  }
+
+  /* canvas — subtle grain + radial wash + grid */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background: var(--bg-0);
+    pointer-events: none;
+    z-index: -2;
+  }
+  body::after {
+    content: "";
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: -1;
+    mask-image: radial-gradient(ellipse at 50% 30%, black 30%, transparent 90%);
+  }
+
+  ::selection { background: var(--lime); color: var(--bg-0); }
+
+  /* type helpers */
+  .display    { font-family: var(--ff-display); font-weight: 400; letter-spacing: -0.01em; }
+  .display-i  { font-family: var(--ff-display); font-style: italic; font-weight: 400; }
+  .mono       { font-family: var(--ff-mono); font-variant-numeric: tabular-nums; }
+  .upper      { text-transform: uppercase; letter-spacing: 0.14em; }
+  .micro      { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+
+  /* ─────────────────────────────────────────────────────────────
+     Layout shell
+     ───────────────────────────────────────────────────────────── */
+  .shell {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 28px 36px 80px;
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     Top bar
+     ───────────────────────────────────────────────────────────── */
+  .topbar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 32px;
+    padding: 18px 0 20px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .brand {
+    display: flex; align-items: baseline; gap: 14px;
+  }
+  .brand-mark {
+    width: 34px; height: 34px;
+    position: relative;
+    display: inline-grid; place-items: center;
+    border: 1px solid var(--line-bright);
+    border-radius: 50%;
+    transform: translateY(4px);
+  }
+  .brand-mark::before {
+    content: "";
+    position: absolute; inset: 5px;
+    border: 1px solid var(--lime);
+    border-radius: 50%;
+    border-top-color: transparent;
+    border-right-color: transparent;
+    transform: rotate(-22deg);
+  }
+  .brand-mark::after {
+    content: "";
+    position: absolute;
+    width: 4px; height: 4px; background: var(--lime);
+    border-radius: 50%;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+  }
+  .brand-name {
+    font-family: var(--ff-display);
+    font-size: 28px;
+    letter-spacing: -0.005em;
+    line-height: 1;
+  }
+  .brand-name em {
+    font-style: italic;
+    color: var(--lime);
+    margin: 0 1px;
+  }
+  .brand-sub {
+    font-family: var(--ff-mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    color: var(--muted);
+    text-transform: uppercase;
+    border-left: 1px solid var(--line);
+    padding-left: 14px;
+    margin-left: 4px;
+  }
+
+  .crumb {
+    display: flex; align-items: center; gap: 18px;
+    padding-left: 8px;
+    border-left: 1px solid var(--line);
+  }
+  .crumb a {
+    color: var(--ink-dim);
+    text-decoration: none;
+    font-size: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid transparent;
+    transition: color 120ms, border-color 120ms;
+  }
+  .crumb a:hover { color: var(--lime); border-color: var(--lime); }
+  .crumb a.active { color: var(--ink); border-color: var(--ink); }
+
+  .topright {
+    display: flex; align-items: center; gap: 22px;
+  }
+  .live {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--ff-mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+  }
+  .live { cursor: pointer; }
+  .live .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--lime);
+    box-shadow: 0 0 0 0 rgba(255,255,255,0.5);
+    animation: pulse 1.8s infinite;
+  }
+  .live[data-state="err"]     .dot { background: var(--faint); animation: none; box-shadow: none; }
+  .live[data-state="pending"] .dot { background: var(--muted); animation: pulse 1.2s infinite; }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.5); }
+    70%  { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+  }
+
+  .clock {
+    font-family: var(--ff-mono);
+    font-size: 12px;
+    color: var(--ink-dim);
+    letter-spacing: 0.06em;
+  }
+  .clock span { color: var(--muted); }
+
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, #2A2A2A 0%, #181818 100%);
+    border: 1px solid var(--line-bright);
+    display: inline-grid; place-items: center;
+    font-family: var(--ff-display); font-size: 14px;
+    color: var(--lime);
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     Page heading
+     ───────────────────────────────────────────────────────────── */
+  .page-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 24px;
+    padding: 48px 0 28px;
+    border-bottom: 1px solid var(--line);
+  }
+  .page-title {
+    font-family: var(--ff-display);
+    font-size: clamp(44px, 5.4vw, 72px);
+    line-height: 0.96;
+    letter-spacing: -0.018em;
+    margin: 0;
+    color: var(--ink);
+  }
+  .page-title em {
+    font-style: italic;
+    color: var(--lime);
+  }
+  .page-meta {
+    text-align: right;
+    color: var(--muted);
+  }
+  .page-meta .row { display: block; }
+  .page-meta .row .v { color: var(--ink-dim); font-family: var(--ff-mono); }
+
+  /* ─────────────────────────────────────────────────────────────
+     Stat strip
+     ───────────────────────────────────────────────────────────── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-bottom: 1px solid var(--line);
+  }
+  .stat {
+    padding: 32px 28px 30px;
+    border-right: 1px solid var(--line);
+    position: relative;
+  }
+  .stat:last-child { border-right: 0; }
+  .stat .label {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .stat .label .name { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+  .stat .delta {
+    font-family: var(--ff-mono); font-size: 10px;
+    padding: 2px 6px; border-radius: var(--r-xs);
+    border: 1px solid var(--line-bright);
+    color: var(--ink-dim);
+  }
+  .stat .delta.up   { color: var(--lime);   border-color: rgba(255,255,255,0.35); }
+  .stat .delta.down { color: var(--crimson);border-color: rgba(255,255,255,0.35); }
+  .stat .num {
+    font-family: var(--ff-display);
+    font-size: 76px;
+    line-height: 0.95;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+  }
+  .stat .sub {
+    margin-top: 14px;
+    font-size: 11px; color: var(--muted);
+    display: flex; justify-content: space-between;
+  }
+  .stat .sub strong { color: var(--ink-dim); font-weight: 500; }
+  .spark {
+    position: absolute; right: 24px; top: 28px;
+    width: 64px; height: 22px;
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     Main grid
+     ───────────────────────────────────────────────────────────── */
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    gap: 28px;
+    padding: 36px 0 0;
+  }
+
+  .panel {
+    background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-0) 100%);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-1);
+    overflow: hidden;
+  }
+  .panel-head {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+    padding: 22px 26px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .panel-title {
+    font-family: var(--ff-display);
+    font-size: 26px;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .panel-title em { font-style: italic; color: var(--lime); }
+  .panel-sub {
+    font-size: 11px; color: var(--muted);
+    font-family: var(--ff-mono);
+    letter-spacing: 0.08em;
+    margin-top: 6px;
+  }
+  .panel-actions {
+    display: flex; gap: 6px;
+  }
+  .chip {
+    font-family: var(--ff-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    background: transparent;
+    cursor: pointer;
+    transition: color 120ms, border-color 120ms;
+  }
+  .chip:hover { color: var(--ink); border-color: var(--line-bright); }
+  .chip.on { color: var(--bg-0); background: var(--lime); border-color: var(--lime); }
+
+  /* ─────────────────────────────────────────────────────────────
+     Conversation feed
+     ───────────────────────────────────────────────────────────── */
+  .feed { padding: 4px 0; }
+
+  .row-conv {
+    display: grid;
+    grid-template-columns: 56px 1.2fr 1fr 92px 80px;
+    align-items: center;
+    gap: 18px;
+    padding: 18px 26px;
+    border-bottom: 1px solid var(--line);
+    transition: background 160ms;
+    cursor: pointer;
+  }
+  .row-conv:last-child { border-bottom: 0; }
+  .row-conv:hover { background: rgba(255,255,255,0.03); }
+
+  .ava {
+    width: 40px; height: 40px;
+    border: 1px solid var(--line-bright);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-family: var(--ff-display); font-size: 16px;
+    color: var(--ink-dim);
+    background: var(--bg-2);
+  }
+
+  .conv-who .nm {
+    font-size: 13.5px; color: var(--ink);
+    font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+  .conv-who .ph {
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .conv-who .ph .lang {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    padding: 1px 5px;
+    border-radius: var(--r-xs);
+    background: var(--bg-2);
+    color: var(--ink-dim);
+    border: 1px solid var(--line);
+  }
+
+  .conv-msg {
+    color: var(--ink-dim);
+    font-size: 12.5px;
+    line-height: 1.5;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .conv-msg .quote {
+    font-family: var(--ff-display); font-style: italic;
+    color: var(--muted);
+    margin-right: 4px;
+  }
+
+  .stage {
+    display: inline-block;
+    font-family: var(--ff-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: var(--r-xs);
+    background: var(--bg-2);
+    color: var(--ink-dim);
+    border: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .stage.booking { color: var(--lime);    border-color: rgba(255,255,255,0.3); }
+  .stage.review  { color: var(--azure);   border-color: rgba(255,255,255,0.25); }
+  .stage.invoice { color: var(--amber);   border-color: rgba(255,255,255,0.25); }
+  .stage.complaint { color: var(--crimson); border-color: rgba(255,255,255,0.25); }
+  .stage.amc     { color: var(--gold);    border-color: rgba(255,255,255,0.25); }
+
+  .timeago {
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+  }
+  .timeago .ago { color: var(--ink-dim); }
+
+  /* ─────────────────────────────────────────────────────────────
+     Right column
+     ───────────────────────────────────────────────────────────── */
+  .right-col {
+    display: flex; flex-direction: column; gap: 28px;
+  }
+
+  /* Today timeline */
+  .day-timeline {
+    padding: 8px 26px 22px;
+  }
+  .ttl-head {
+    display: flex; justify-content: space-between;
+    padding: 12px 0 16px;
+    color: var(--muted);
+    font-family: var(--ff-mono); font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    border-bottom: 1px dashed var(--line);
+  }
+  .job {
+    display: grid;
+    grid-template-columns: 64px 1fr auto;
+    align-items: start;
+    gap: 14px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+  }
+  .job:last-child { border-bottom: 0; }
+  .job .when {
+    font-family: var(--ff-display);
+    font-size: 22px;
+    line-height: 1;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .job .when small {
+    display: block;
+    font-family: var(--ff-mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+  .job .what .svc {
+    font-size: 13px; color: var(--ink);
+    font-weight: 500;
+  }
+  .job .what .addr {
+    color: var(--muted); font-size: 11.5px;
+    font-family: var(--ff-mono);
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+  }
+  .job .what .tech {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--ink-dim);
+  }
+  .job .what .tech::before {
+    content: ""; width: 5px; height: 5px; background: var(--lime); border-radius: 50%;
+  }
+  .job .badge {
+    font-family: var(--ff-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: var(--r-xs);
+    color: var(--muted);
+    border: 1px solid var(--line-bright);
+  }
+  .job.now .when { color: var(--lime); }
+  .job.now::before {
+    content: "";
+    position: absolute; left: -26px; top: 18px;
+    width: 4px; height: 24px; background: var(--lime);
+  }
+
+  /* Alerts */
+  .alerts {
+    padding: 4px 0;
+  }
+  .alert {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    gap: 14px;
+    padding: 16px 26px;
+    border-bottom: 1px solid var(--line);
+    align-items: center;
+  }
+  .alert:last-child { border-bottom: 0; }
+  .alert .ico {
+    width: 24px; height: 24px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    background: var(--bg-2);
+    color: var(--amber);
+    font-family: var(--ff-mono); font-size: 11px; font-weight: 600;
+    border: 1px solid var(--line-bright);
+  }
+  .alert.high .ico { color: var(--crimson); border-color: rgba(255,255,255,0.35); }
+  .alert.med  .ico { color: var(--amber);   border-color: rgba(255,255,255,0.3); }
+  .alert.low  .ico { color: var(--azure);   border-color: rgba(255,255,255,0.25); }
+  .alert .msg .ttl { font-size: 12.5px; color: var(--ink); }
+  .alert .msg .sub { font-size: 11px; color: var(--muted); margin-top: 3px; font-family: var(--ff-mono); }
+  .alert .go {
+    color: var(--muted); cursor: pointer;
+    font-family: var(--ff-mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  .alert .go:hover { color: var(--lime); }
+
+  /* ─────────────────────────────────────────────────────────────
+     Data tabs
+     ───────────────────────────────────────────────────────────── */
+  .tabs {
+    margin-top: 28px;
+    padding: 22px 26px 0;
+    background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-0) 100%);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+  }
+  .tabs-bar {
+    display: flex; gap: 28px; align-items: end; justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 14px;
+  }
+  .tabs-list { display: flex; gap: 28px; }
+  .tab {
+    background: none; border: 0; padding: 8px 0;
+    font: 500 12px/1 var(--ff-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    cursor: pointer;
+    position: relative;
+    transition: color 160ms;
+  }
+  .tab .count {
+    font-size: 9.5px;
+    color: var(--faint);
+    margin-left: 6px;
+    vertical-align: super;
+    letter-spacing: 0;
+  }
+  .tab:hover { color: var(--ink-dim); }
+  .tab.on { color: var(--ink); }
+  .tab.on::after {
+    content: "";
+    position: absolute;
+    left: -4px; right: -4px; bottom: -15px;
+    height: 2px; background: var(--lime);
+  }
+  .tab-actions {
+    display: flex; gap: 8px; align-items: center;
+    font-family: var(--ff-mono); font-size: 11px; color: var(--muted);
+  }
+  .tab-actions input {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font: 400 12px/1 var(--ff-mono);
+    padding: 7px 12px;
+    border-radius: var(--r-sm);
+    outline: none;
+    width: 220px;
+  }
+  .tab-actions input:focus { border-color: var(--lime); }
+
+  table.data {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  table.data thead th {
+    text-align: left;
+    font: 500 10px/1 var(--ff-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+    padding: 18px 12px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  table.data tbody td {
+    padding: 16px 12px;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-dim);
+  }
+  table.data tbody tr:last-child td { border-bottom: 0; }
+  table.data tbody tr:hover { background: rgba(255,255,255,0.025); }
+
+  /* tab panels — only the active one is visible */
+  .tab-panel { display: none; }
+  .tab-panel.on { display: block; }
+
+  /* toast */
+  .toast {
+    position: fixed; left: 50%; bottom: 36px; transform: translateX(-50%) translateY(20px);
+    background: var(--bg-2); border: 1px solid var(--line-bright);
+    padding: 10px 18px; border-radius: 999px;
+    color: var(--ink-dim); font-size: 12px;
+    letter-spacing: 0.02em;
+    opacity: 0; pointer-events: none;
+    transition: opacity 200ms, transform 200ms;
+    z-index: 50;
+    font-family: var(--ff-mono);
+  }
+  .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast b { color: var(--ink); font-weight: 500; margin-right: 6px; }
+
+  /* row + alert clicked flash */
+  .row-conv.flash, .alert.flash, .job.flash { background: rgba(255,255,255,0.06); }
+  .row-conv.hide { display: none; }
+  table.data tbody tr.hide { display: none; }
+
+  /* empty state */
+  .empty {
+    padding: 60px 28px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+  }
+  .empty b { color: var(--ink-dim); font-weight: 500; }
+
+  /* ─────────────────────────────────────────────────────────────
+     Login (sign-in gate)
+     ───────────────────────────────────────────────────────────── */
+  .shell.locked { filter: blur(8px) brightness(0.5); pointer-events: none; user-select: none; }
+
+  .login-screen {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .login-screen.on { display: flex; }
+
+  .login-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-bright);
+    border-radius: var(--r-md);
+    padding: 40px 36px 32px;
+    box-shadow: 0 30px 80px -30px rgba(0,0,0,0.9);
+  }
+  .login-brand {
+    display: flex; align-items: baseline; gap: 14px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 28px;
+  }
+  .login-title {
+    margin: 4px 0 6px;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .login-sub {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.55;
+    margin-bottom: 24px;
+  }
+  .login-field {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-bottom: 16px;
+  }
+  .login-field label {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .login-field input {
+    background: var(--bg-2);
+    border: 1px solid var(--line-bright);
+    color: var(--ink);
+    font: 400 14px/1 var(--ff-sans);
+    padding: 12px 14px;
+    border-radius: var(--r-sm);
+    outline: none;
+    transition: border-color 120ms;
+    -webkit-font-smoothing: antialiased;
+  }
+  .login-field input:focus { border-color: var(--ink); }
+
+  .login-btn {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--bg-0);
+    font: 500 12px/1 var(--ff-sans);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: opacity 120ms;
+  }
+  .login-btn:hover  { opacity: 0.85; }
+  .login-btn:active { opacity: 0.7; }
+
+  .login-status {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--muted);
+    min-height: 16px;
+    line-height: 1.5;
+  }
+  .login-status[data-kind="ok"]  { color: var(--ink); }
+  .login-status[data-kind="err"] { color: var(--ink); border-left: 2px solid var(--ink); padding-left: 10px; }
+
+  .login-foot {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-size: 10px;
+    color: var(--faint);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  table.data .pri { color: var(--ink); font-weight: 500; }
+  table.data .mono { font-family: var(--ff-mono); }
+  table.data .amt {
+    font-family: var(--ff-display);
+    font-size: 18px;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  table.data .amt small {
+    font-family: var(--ff-mono);
+    font-size: 9.5px;
+    color: var(--muted);
+    letter-spacing: 0.14em;
+    margin-left: 4px;
+  }
+
+  /* status pills */
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--ff-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+  }
+  .pill::before {
+    content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor;
+  }
+  .pill.scheduled { color: var(--azure);   border-color: rgba(255,255,255,0.25); }
+  .pill.completed { color: var(--lime);    border-color: rgba(255,255,255,0.3); }
+  .pill.cancelled { color: var(--faint);   border-color: var(--line); }
+  .pill.pending   { color: var(--amber);   border-color: rgba(255,255,255,0.25); }
+  .pill.paid      { color: var(--lime);    border-color: rgba(255,255,255,0.3); }
+  .pill.disputed  { color: var(--crimson); border-color: rgba(255,255,255,0.25); }
+  .pill.basic     { color: var(--ink-dim); }
+  .pill.premium   { color: var(--gold);    border-color: rgba(255,255,255,0.25); }
+  .pill.high      { color: var(--crimson); border-color: rgba(255,255,255,0.25); }
+  .pill.medium    { color: var(--amber);   border-color: rgba(255,255,255,0.25); }
+  .pill.low       { color: var(--azure);   border-color: rgba(255,255,255,0.25); }
+  .pill.open      { color: var(--crimson); border-color: rgba(255,255,255,0.25); }
+  .pill.in_progress { color: var(--amber); border-color: rgba(255,255,255,0.25); }
+  .pill.resolved  { color: var(--lime);    border-color: rgba(255,255,255,0.3); }
+
+  /* ─────────────────────────────────────────────────────────────
+     Footer marquee
+     ───────────────────────────────────────────────────────────── */
+  .ticker {
+    margin-top: 56px;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    overflow: hidden;
+    position: relative;
+    padding: 14px 0;
+    background: var(--bg-1);
+  }
+  .ticker-track {
+    display: flex; gap: 56px;
+    white-space: nowrap;
+    animation: ticker 60s linear infinite;
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+  .ticker-track span em {
+    font-family: var(--ff-display);
+    font-style: italic;
+    color: var(--lime);
+    font-size: 13px;
+    margin: 0 4px;
+  }
+  .ticker-track span b {
+    color: var(--ink-dim);
+    font-weight: 500;
+  }
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  .footnote {
+    margin-top: 28px;
+    display: flex; justify-content: space-between;
+    color: var(--faint);
+    font-family: var(--ff-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .footnote em {
+    font-family: var(--ff-display); font-style: italic;
+    text-transform: none; letter-spacing: 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     Entrance — staggered reveal
+     ───────────────────────────────────────────────────────────── */
+  .reveal { opacity: 0; transform: translateY(8px); animation: reveal 700ms ease-out forwards; }
+  .reveal[data-i="1"] { animation-delay: 60ms; }
+  .reveal[data-i="2"] { animation-delay: 140ms; }
+  .reveal[data-i="3"] { animation-delay: 220ms; }
+  .reveal[data-i="4"] { animation-delay: 300ms; }
+  .reveal[data-i="5"] { animation-delay: 380ms; }
+  .reveal[data-i="6"] { animation-delay: 460ms; }
+  @keyframes reveal {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     Responsive
+     ───────────────────────────────────────────────────────────── */
+  @media (max-width: 1180px) {
+    .grid { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .stat:nth-child(2) { border-right: 0; }
+    .stat:nth-child(1), .stat:nth-child(2) { border-bottom: 1px solid var(--line); }
+  }
+  @media (max-width: 720px) {
+    .shell { padding: 18px; }
+    .topbar { grid-template-columns: 1fr auto; }
+    .crumb, .clock { display: none; }
+    .stats { grid-template-columns: 1fr; }
+    .stat { border-right: 0; border-bottom: 1px solid var(--line); }
+    .row-conv { grid-template-columns: 40px 1fr 70px; }
+    .row-conv .conv-msg, .row-conv .stage { display: none; }
+    .tab-actions input { width: 130px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ───────── Sign-in gate ───────── -->
+<div class="login-screen" id="login">
+  <div class="login-card">
+    <div class="login-brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">SEN<em>a</em>Q</span>
+    </div>
+
+    <h1 class="login-title">Sign in</h1>
+    <p class="login-sub">
+      Enter the email address your administrator added in Supabase.
+      We'll send you a one-time sign-in link.
+    </p>
+
+    <form id="login-form" autocomplete="on">
+      <div class="login-field">
+        <label for="login-email">Email</label>
+        <input id="login-email" type="email" autocomplete="email"
+               placeholder="staff@senaq.ae" required />
+      </div>
+      <div class="login-field">
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password" autocomplete="current-password"
+               placeholder="••••••••" />
+      </div>
+      <button class="login-btn" type="submit" id="login-submit">Sign in</button>
+      <button class="login-btn" type="button" id="login-magic"
+              style="margin-top:8px; background:transparent; color:var(--ink-dim); border-color:var(--line-bright);">
+        Or send magic link
+      </button>
+      <div class="login-status" id="login-status" data-kind="info"></div>
+    </form>
+
+    <div class="login-foot">Operations console · authorized staff only</div>
+  </div>
+</div>
+
+<div class="shell">
+
+  <!-- ───────── Top bar ───────── -->
+  <header class="topbar reveal" data-i="1">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">SEN<em>a</em>Q</span>
+      <span class="brand-sub">Operations</span>
+    </div>
+
+    <nav class="crumb">
+      <a href="#" class="active">Dashboard</a>
+      <a href="#">Conversations</a>
+      <a href="#">Jobs</a>
+      <a href="#">AMC</a>
+      <a href="#">Invoices</a>
+      <a href="#">Customers</a>
+    </nav>
+
+    <div class="topright">
+      <span class="live" data-state="pending"><span class="dot"></span> <span class="live-text">Connecting…</span></span>
+      <span class="clock"><span id="clk">00:00:00</span></span>
+      <span class="avatar" title="Account">·</span>
+    </div>
+  </header>
+
+  <!-- ───────── Page head ───────── -->
+  <section class="page-head reveal" data-i="2">
+    <h1 class="page-title">
+      Welcome back, <em id="page-user">there</em>.
+    </h1>
+    <div class="page-meta">
+      <span class="row micro" id="page-date">—</span>
+      <span class="row" style="margin-top:6px;">
+        <span class="micro">Last sync</span>
+        <span class="v" style="margin-left:8px;" id="page-sync">—</span>
+      </span>
+    </div>
+  </section>
+
+  <!-- ───────── Stat strip ───────── -->
+  <section class="stats reveal" data-i="3">
+    <div class="stat" id="stat-active-conv">
+      <div class="label">
+        <span class="name">Active Conversations</span>
+        <span class="delta">live</span>
+      </div>
+      <div class="num"><span class="num-val">—</span></div>
+      <div class="sub"><span class="sub-val">since midnight</span></div>
+      <svg class="spark" viewBox="0 0 64 22" fill="none" stroke="currentColor" stroke-width="1.2" style="color: var(--ink-dim);">
+        <polyline points="0,18 8,16 16,12 24,14 32,9 40,11 48,6 56,8 64,3" />
+      </svg>
+    </div>
+    <div class="stat" id="stat-jobs-today">
+      <div class="label">
+        <span class="name">Jobs Today</span>
+        <span class="delta">today</span>
+      </div>
+      <div class="num"><span class="num-val">—</span></div>
+      <div class="sub"><span class="sub-val">— scheduled · — done</span></div>
+    </div>
+    <div class="stat" id="stat-amc-expiring">
+      <div class="label">
+        <span class="name">AMC Expiring · 30d</span>
+        <span class="delta">30d</span>
+      </div>
+      <div class="num"><span class="num-val">—</span></div>
+      <div class="sub"><span class="sub-val">— premium · — basic</span></div>
+    </div>
+    <div class="stat" id="stat-overdue-invoices">
+      <div class="label">
+        <span class="name">Overdue Invoices</span>
+        <span class="delta">past due</span>
+      </div>
+      <div class="num"><span class="num-val">—</span></div>
+      <div class="sub"><span class="sub-val">$— outstanding</span></div>
+    </div>
+  </section>
+
+  <!-- ───────── Main grid ───────── -->
+  <section class="grid">
+
+    <!-- ── LEFT: Live conversations ─────────────────────── -->
+    <div class="panel reveal" data-i="4">
+      <div class="panel-head">
+        <div>
+          <h2 class="panel-title">Live <em>conversations</em></h2>
+          <div class="panel-sub">Customer-facing button flow · stateful per phone</div>
+        </div>
+        <div class="panel-actions" data-group="conv-filter">
+          <button class="chip on" data-filter="all">All</button>
+          <button class="chip" data-filter="booking">Booking</button>
+          <button class="chip" data-filter="amc">AMC</button>
+          <button class="chip" data-filter="review">Review</button>
+          <button class="chip" data-filter="complaint">Escalations</button>
+        </div>
+      </div>
+
+      <div class="feed" id="conv-feed">
+        <div class="empty"><b>Loading conversations…</b></div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT column ──────────────────────────────────── -->
+    <div class="right-col">
+
+      <!-- Today's Jobs -->
+      <div class="panel reveal" data-i="5">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Today's <em>jobs</em></h2>
+            <div class="panel-sub" id="today-jobs-sub">loading…</div>
+          </div>
+          <button class="chip">+ Add</button>
+        </div>
+
+        <div class="day-timeline" id="today-jobs">
+          <div class="empty"><b>Loading…</b></div>
+        </div>
+      </div>
+
+      <!-- Alerts -->
+      <div class="panel reveal" data-i="6">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Needs <em>attention</em></h2>
+            <div class="panel-sub">Triaged by severity · auto-routed from agent</div>
+          </div>
+          <button class="chip on" id="alerts-chip">— high</button>
+        </div>
+
+        <div class="alerts" id="alerts">
+          <div class="empty"><b>Loading…</b></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ───────── Data tabs ───────── -->
+  <section class="tabs reveal" data-i="6">
+    <div class="tabs-bar">
+      <div class="tabs-list">
+        <button class="tab on" data-tab="jobs">Jobs<span class="count" id="count-jobs">—</span></button>
+        <button class="tab" data-tab="amc">AMC contracts<span class="count" id="count-amc">—</span></button>
+        <button class="tab" data-tab="invoices">Invoices<span class="count" id="count-invoices">—</span></button>
+        <button class="tab" data-tab="complaints">Complaints<span class="count" id="count-complaints">—</span></button>
+        <button class="tab" data-tab="reminders">Reminder queue<span class="count" id="count-reminders">—</span></button>
+        <button class="tab" data-tab="customers">Customers<span class="count" id="count-customers">—</span></button>
+      </div>
+      <div class="tab-actions">
+        <input type="search" placeholder="grep customer, phone, area…" />
+        <button class="chip">Export CSV</button>
+      </div>
+    </div>
+
+    <!-- jobs -->
+    <div class="tab-panel on" data-panel="jobs">
+      <table class="data">
+        <thead>
+          <tr>
+            <th style="width:160px;">Slot</th>
+            <th>Customer</th>
+            <th>Service</th>
+            <th>Address</th>
+            <th>Technician</th>
+            <th style="width:130px;">Status</th>
+            <th style="width:110px; text-align:right;">Job ID</th>
+          </tr>
+        </thead>
+        <tbody id="tb-jobs"><tr><td colspan="7" class="empty"><b>Loading…</b></td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- AMC contracts -->
+    <div class="tab-panel" data-panel="amc">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th style="width:110px;">Tier</th>
+            <th style="width:140px;">Renewal</th>
+            <th style="width:120px;">Days left</th>
+            <th style="width:140px;">Last updated</th>
+            <th style="width:130px;">Nudge state</th>
+          </tr>
+        </thead>
+        <tbody id="tb-amc"><tr><td colspan="6" class="empty"><b>Loading…</b></td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Invoices -->
+    <div class="tab-panel" data-panel="invoices">
+      <table class="data">
+        <thead>
+          <tr>
+            <th style="width:130px;">Invoice</th>
+            <th>Customer</th>
+            <th>Job</th>
+            <th style="width:140px;">Due</th>
+            <th style="width:160px; text-align:right;">Amount</th>
+            <th style="width:120px;">Status</th>
+          </tr>
+        </thead>
+        <tbody id="tb-invoices"><tr><td colspan="6" class="empty"><b>Loading…</b></td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Complaints -->
+    <div class="tab-panel" data-panel="complaints">
+      <table class="data">
+        <thead>
+          <tr>
+            <th style="width:120px;">Ref</th>
+            <th>Customer</th>
+            <th>Reason</th>
+            <th style="width:110px;">Severity</th>
+            <th style="width:140px;">Status</th>
+            <th style="width:160px;">Opened</th>
+          </tr>
+        </thead>
+        <tbody id="tb-complaints"><tr><td colspan="6" class="empty"><b>Loading…</b></td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Reminders -->
+    <div class="tab-panel" data-panel="reminders">
+      <table class="data">
+        <thead>
+          <tr>
+            <th style="width:170px;">Fires at</th>
+            <th>Customer</th>
+            <th style="width:140px;">Kind</th>
+            <th>Payload</th>
+            <th style="width:110px;">State</th>
+          </tr>
+        </thead>
+        <tbody id="tb-reminders"><tr><td colspan="5" class="empty"><b>Loading…</b></td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Customers -->
+    <div class="tab-panel" data-panel="customers">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th style="width:160px;">Phone</th>
+            <th style="width:120px;">AMC tier</th>
+            <th>Current stage</th>
+            <th style="width:160px;">Created</th>
+            <th style="width:160px;">Last activity</th>
+          </tr>
+        </thead>
+        <tbody id="tb-customers"><tr><td colspan="6" class="empty"><b>Loading…</b></td></tr></tbody>
+      </table>
+    </div>
+
+  </section>
+
+  <!-- ───────── Footer ticker ───────── -->
+  <section class="ticker reveal" data-i="6">
+    <div class="ticker-track">
+      <span><b>14:31</b> &nbsp;Booking confirmed <em>Sarah Chen</em> · cockroach · 26 May 07:00</span>
+      <span><b>14:30</b> &nbsp;Complaint opened <em>James Cooper</em> · severity high · routed to ops</span>
+      <span><b>14:28</b> &nbsp;Payment link sent <em>Maria Lopez</em> · $420 · INV-2026-0418</span>
+      <span><b>14:26</b> &nbsp;Review captured <em>David Park</em> · 5★ · Google link delivered</span>
+      <span><b>14:20</b> &nbsp;AMC renewed <em>Lauren Walsh</em> · premium · renewal 2027-05-25</span>
+      <span><b>14:18</b> &nbsp;Re-engagement <em>Mike Thompson</em> · last prompt replayed</span>
+      <!-- duplicated for seamless loop -->
+      <span><b>14:31</b> &nbsp;Booking confirmed <em>Sarah Chen</em> · cockroach · 26 May 07:00</span>
+      <span><b>14:30</b> &nbsp;Complaint opened <em>James Cooper</em> · severity high · routed to ops</span>
+      <span><b>14:28</b> &nbsp;Payment link sent <em>Maria Lopez</em> · $420 · INV-2026-0418</span>
+      <span><b>14:26</b> &nbsp;Review captured <em>David Park</em> · 5★ · Google link delivered</span>
+      <span><b>14:20</b> &nbsp;AMC renewed <em>Lauren Walsh</em> · premium · renewal 2027-05-25</span>
+      <span><b>14:18</b> &nbsp;Re-engagement <em>Mike Thompson</em> · last prompt replayed</span>
+    </div>
+  </section>
+
+  <footer class="footnote">
+    <span>SENAQ · operations console</span>
+    <span><em>"Numbers are quiet. People are not."</em></span>
+    <span>webhook P95 312 ms · build 026.05a</span>
+  </footer>
+
+</div>
+
+<!-- toast element -->
+<div class="toast" id="toast"></div>
+
+<!--
+  Dashboard data layer.
+
+  config.js MUST come first and is gitignored — copy config.example.js → config.js
+  and fill in your Supabase project URL + anon key.
+
+  app.js is an ES module that imports @supabase/supabase-js from a CDN. It loads
+  initial data, subscribes to postgres_changes on each table, and re-renders the
+  affected sections live.
+-->
+<script src="config.js"></script>
+<script type="module" src="app.js"></script>
+
+</body>
+</html>

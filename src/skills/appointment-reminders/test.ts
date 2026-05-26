@@ -43,9 +43,9 @@ void realDispatch; // silence unused
 
 const customer: Customer = {
   id: "cust_test_001",
-  phone: "+971500000000",
+  phone: "+15555550100",
   name: "Test Customer",
-  address: "Test Villa, Dubai",
+  address: "123 Test Street",
   amc_tier: "none",
   wa_stage: "reminder_ack",
   wa_context: {},
